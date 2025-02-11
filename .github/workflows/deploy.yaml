@@ -55,11 +55,19 @@ jobs:
 
       - name: Stop and remove old containers (if any)
         run: |
-          CONTAINER_ID=$(docker ps -q --filter "ancestor=${{ secrets.ECR_REPOSITORY_NAME }}")
+          CONTAINER_ID=$(docker ps -q --filter "ancestor=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_NAME }}")
           if [ ! -z "$CONTAINER_ID" ]; then
             echo "Stopping and removing existing container..."
             docker stop $CONTAINER_ID
             docker rm $CONTAINER_ID
+          fi
+
+      - name: Free port 8080 if still occupied
+        run: |
+          PID=$(sudo lsof -t -i:8080)
+          if [ ! -z "$PID" ]; then
+            echo "Port 8080 is in use. Killing process $PID..."
+            sudo kill -9 $PID
           fi
 
       - name: Remove old Docker images (optional)
