@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
 
 
+
+#
 # Load environment variables
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
