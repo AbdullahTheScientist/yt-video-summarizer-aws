@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -30,15 +30,16 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
   Continuous-Deployment:
     needs: Continuous-Integration
     runs-on: self-hosted
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
@@ -52,11 +53,25 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Run Docker Image to serve users
+      - name: Stop and remove old containers (if any)
         run: |
-         docker run -d \
-         -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-         -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-         -e AWS_REGION="${{ secrets.AWS_REGION }}" \
-         -e GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
-         -p 8080:8080 "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPOSITORY_NAME }}":latest
+          CONTAINER_ID=$(docker ps -q --filter "ancestor=${{ secrets.ECR_REPOSITORY_NAME }}")
+          if [ ! -z "$CONTAINER_ID" ]; then
+            echo "Stopping and removing existing container..."
+            docker stop $CONTAINER_ID
+            docker rm $CONTAINER_ID
+          fi
+
+      - name: Remove old Docker images (optional)
+        run: |
+          docker image prune -f
+
+      - name: Run new Docker container
+        run: |
+          docker run -d \
+          -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+          -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+          -e AWS_REGION="${{ secrets.AWS_REGION }}" \
+          -e GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
+          -p 8080:8080 \
+          "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPOSITORY_NAME }}":latest
