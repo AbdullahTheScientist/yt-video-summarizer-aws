@@ -37,7 +37,7 @@ jobs:
   Continuous-Deployment:
     needs: Continuous-Integration
     runs-on: self-hosted
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -64,10 +64,12 @@ jobs:
 
       - name: Free port 8080 if still occupied
         run: |
-          PID=$(sudo lsof -t -i:8080)
+          PID=$(sudo lsof -t -i:8080 || echo "")
           if [ ! -z "$PID" ]; then
             echo "Port 8080 is in use. Killing process $PID..."
             sudo kill -9 $PID
+          else
+            echo "No process is running on port 8080."
           fi
 
       - name: Remove old Docker images (optional)
