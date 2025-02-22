@@ -1,12 +1,12 @@
 # transcript generation
-
 import requests
 
 url = "http://127.0.0.1:5000/transcript"
-data = {"youtube_link": "https://www.youtube.com/watch?v=zC6B490i-IY&t=423s"}
+data = {"youtube_link": "https://www.youtube.com/watch?v=4y9ss33QWTY"}
 
 response = requests.post(url, json=data)
-print(response.json())  # Should return the transcript
+print(response.json())  # Prints the transcript
+# Should return the transcript
 
 # # summarty generation
 
